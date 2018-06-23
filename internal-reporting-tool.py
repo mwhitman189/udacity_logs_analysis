@@ -10,9 +10,12 @@ import psycopg2
 DBNAME = "news"
 
 # Searches the database for the three most accessed articles
+
+
 def top_articles():
     db = psycopg2.connect(dbname=DBNAME)
     c = db.cursor()
-    c.execute("select slug, title from articles, log where slug = trim(leading '/article/' from path);") # Finds all correlating slug and article names.
+    # Correlates article titles to slugs, then sums the number of views and groups by title and returns top 3.
+    c.execute("select title, views from (select title, count(title) as views from articles left join log on slug = trim(leading '/article/' from path) group by title order by views desc) as sq limit 3;")
     return c.fetchall()
     c.close()
