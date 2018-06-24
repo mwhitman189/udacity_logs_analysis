@@ -17,7 +17,7 @@ def top_articles():
     db = psycopg2.connect(dbname=DBNAME)
     c = db.cursor()
     # Correlates article titles to slugs, then sums the number of views and groups by title and returns top 3.
-    c.execute("select title, views from (select title, count(title) as views from articles left join log on slug = trim(leading '/article/' from path) group by title order by views desc) as sq limit 3;")
+    c.execute("select title, count(title) as views from articles left join log on slug = trim(leading '/article/' from path) group by title order by views desc limit 3;")
     top_three = c.fetchall()
     x = 1
     for article in top_three:
