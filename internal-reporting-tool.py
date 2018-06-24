@@ -44,3 +44,12 @@ def top_authors():
 
 
 top_authors()
+
+
+def req_err_days():
+    db = psycopg2.connect(dbname=DBNAME)
+    c = db.cursor()
+    c.execute("")
+    over_one_percent = c.fetchall()
+
+    c.close()
