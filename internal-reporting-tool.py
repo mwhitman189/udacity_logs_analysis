@@ -4,7 +4,6 @@
 #    3) On which days more than 1% of requests led to errors.
 
 
-import re
 import bleach
 import psycopg2
 
@@ -53,25 +52,23 @@ top_authors()
 
 def req_err_days():
     c = db.cursor()
-    # c.execute(
-    # "SELECT COUNT(status) FROM logview WHERE status NOT LIKE '2%';")
+    c.execute("SELECT date_trunc('day', time) FROM logview;")
+    date = c.fetchall()
     c.execute(
         "SELECT COUNT(status) FROM logview WHERE status NOT LIKE '2%' GROUP BY date_trunc('day', time);")
-    daily_err_count = c.fetchall()
-    print(daily_err_count)
-#    err_count = int(list(c.fetchall()[0])[0])
-#    c.execute(
+    daily_errors = c.fetchall()
+
     c.execute(
         "SELECT COUNT(status) FROM logview GROUP BY date_trunc('day', time);")
-    daily_req = c.fetchall()
-    i = 0
-    for err in daily_err_count:
-        if (int(str(err[i])) / int(str(daily_req[i])) > 1):
-            print(err)
-        i += 1
-#    total = int(list(c.fetchall()[0])[0])
-#    err_perc = (err_count / total) * 100
-#    print(err_perc)
+    daily_requests = c.fetchall()
+
+    errors_n_requests = zip(date, daily_errors, daily_requests)
+
+    for day, err, req in errors_n_requests:
+        perc_daily_error = ((err[0] / req[0]) * 100)
+        if perc_daily_error > 1.0:
+            print(str(day[0]) + str(perc_daily_error))
+
     c.close()
 
 
