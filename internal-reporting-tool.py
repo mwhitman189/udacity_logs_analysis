@@ -15,7 +15,7 @@ DBNAME = "news"
 
 db = psycopg2.connect(dbname=DBNAME)
 c = db.cursor()
-# c.execute("CREATE VIEW top_articles AS SELECT title, COUNT(title) AS views FROM articles LEFT JOIN log ON slug = trim(leading '/article/' from path) GROUP BY title ORDER BY views DESC;")
+
 c.execute("CREATE VIEW auth AS SELECT name, id FROM authors;")
 c.execute("CREATE VIEW art AS SELECT author, title, slug FROM articles;")
 c.execute("CREATE VIEW logview AS SELECT id, path, status, time FROM log;")
@@ -53,21 +53,20 @@ top_authors()
 def req_err_days():
     c = db.cursor()
     c.execute(
-        "SELECT COUNT(status) FROM logview WHERE status NOT LIKE '2%' GROUP BY date_trunc('day', time);")
+        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(status) FROM logview WHERE status LIKE '4%' GROUP BY date_trunc('day', time);")
     daily_errors = c.fetchall()
 
     c.execute(
-        "SELECT COUNT(status) FROM logview GROUP BY date_trunc('day', time);")
+        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(status) FROM logview GROUP BY date_trunc('day', time);")
     daily_requests = c.fetchall()
 
+    # Returns an iterator of tuples where each first/second/third... item is paired together
     errors_n_requests = zip(daily_errors, daily_requests)
-
     for err, req in errors_n_requests:
-        perc_daily_error = ((err[0] / req[0]) * 100)
+        date = err[0]
+        perc_daily_error = ((err[1] / req[1]) * 100)
         if perc_daily_error > 1.0:
-            c.execute("SELECT id, date_trunc('day', time) FROM logview;")
-            print(perc_daily_error)
-
+            print(str(date) + "  %Error: " + str(perc_daily_error))
     c.close()
 
 
