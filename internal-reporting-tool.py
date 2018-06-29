@@ -51,20 +51,21 @@ top_authors()
 
 def req_err_days():
     c = db.cursor()
+
     c.execute(
-        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(status) FROM logview WHERE status LIKE '4%' GROUP BY date_trunc('day', time);")
+        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(id) FROM log WHERE status LIKE '4%' GROUP BY date_trunc('day', time);")
     daily_errors = c.fetchall()
 
     c.execute(
-        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(status) FROM logview GROUP BY date_trunc('day', time);")
+        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(id) FROM log GROUP BY date_trunc('day', time);")
     daily_requests = c.fetchall()
 
     # Returns an iterator of tuples where each first/second/third... item is paired together
     errors_n_requests = zip(daily_errors, daily_requests)
     x = 0
     for err, req in errors_n_requests:
-        date = err[0]
         perc_daily_error = ((err[1] / req[1]) * 100)
+        date = err[0]
         if perc_daily_error > 1.0:
             if x == 0:
                 print("The following dates had error rates over 1%:")
