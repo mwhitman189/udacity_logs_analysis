@@ -1,6 +1,6 @@
 # Internal reporting tool for use with news website PostgeSQL databaseself. #This programs provides data on:
 #    1) The 3 most popular articles of all time
-#    2) Whom the most popular articles are written by
+#    2) Who the most popular article authors are
 #    3) On which days more than 1% of requests led to errors.
 
 
@@ -16,13 +16,12 @@ DBNAME = "news"
 db = psycopg2.connect(dbname=DBNAME)
 c = db.cursor()
 
-c.execute("CREATE VIEW auth AS SELECT name, id FROM authors;")
-c.execute("CREATE VIEW art AS SELECT author, title, slug FROM articles;")
-c.execute("CREATE VIEW logview AS SELECT id, path, status, time FROM log;")
+c.execute(
+    "CREATE INDEX idx_slug_path_comp ON log ((substr(path, length('/article/') + 1)));")
 
 
 def top_three_articles():
-    c.execute("SELECT title, COUNT(title) AS views FROM art LEFT JOIN log ON slug = trim(leading '/article/' from path) GROUP BY title ORDER BY views DESC LIMIT 3;")
+    c.execute("SELECT title, COUNT(title) AS views FROM articles AS a RIGHT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) GROUP BY title ORDER BY views DESC LIMIT 3;")
     top_three = c.fetchall()
     x = 1
     for article in top_three:
@@ -37,7 +36,7 @@ top_three_articles()
 
 def top_authors():
     c = db.cursor()
-    c.execute("SELECT name, COUNT(author) AS arts FROM art LEFT JOIN log ON slug = trim(leading '/article/' from path) JOIN auth ON auth.id = art.author GROUP BY name ORDER BY arts DESC;")
+    c.execute("SELECT name, count(title) AS views FROM articles AS a LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) LEFT JOIN authors AS c ON a.author = c.id GROUP BY name ORDER BY views DESC;")
     top_auth = c.fetchall()
     x = 1
     for auth in top_auth:
@@ -62,11 +61,16 @@ def req_err_days():
 
     # Returns an iterator of tuples where each first/second/third... item is paired together
     errors_n_requests = zip(daily_errors, daily_requests)
+    x = 0
     for err, req in errors_n_requests:
         date = err[0]
         perc_daily_error = ((err[1] / req[1]) * 100)
         if perc_daily_error > 1.0:
-            print(str(date) + "  %Error: " + str(perc_daily_error))
+            if x == 0:
+                print("The following dates had error rates over 1%:")
+            print(str(date) + "  %Error:  " +
+                  str("{: 0.2f}".format(perc_daily_error)))
+            x += 1
     c.close()
 
 
