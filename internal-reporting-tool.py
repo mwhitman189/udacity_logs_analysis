@@ -4,75 +4,126 @@
 #    3) On which days more than 1% of requests led to errors.
 
 
-import bleach
+import os
+import sys
 import psycopg2
 
 DBNAME = "news"
 
+# Specify name given to report text file
+FILENAME = "internal-log-report.txt"
+
+# Create array of explanatory text for each query
+ANSWER_TEXT = [
+    '1. The three most popular articles of all time are:',
+    '2. The most popular article authors are: ',
+    '3. The following days had request errors rates over 1%:']
+
+QUERIES = [
+    ("""
+    SELECT title, COUNT(title) AS views
+    FROM articles AS a
+    RIGHT JOIN log AS b
+    ON a.slug = substr(b.path, length('/article/') + 1)
+    GROUP BY title
+    ORDER BY views DESC LIMIT 3;
+    """),
+    ("""
+    SELECT name, COUNT(title) AS views
+    FROM articles AS a
+    LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1)
+    LEFT JOIN authors AS c ON a.author = c.id
+    GROUP BY name
+    ORDER BY views DESC;
+    """),
+    ("""
+    SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc
+    FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err
+    FROM log
+    GROUP BY day) as sq
+    WHERE ROUND((100 * sq.daily_err / sq.total), 2) > 1;
+    """)]
+
+
+
 # Searches the database for the three most accessed articles
-# TODO: Create view for top article number of views
+#c.execute("SELECT title, COUNT(title) AS views FROM articles AS a RIGHT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) GROUP BY title ORDER BY views DESC LIMIT 3;")
+#top_three = c.fetchall()
+#x = 1
+#for art in top_three:
+#    print(str(x) + ") " + str(art))
+#    x += 1
+#print("\n")
 
 
-db = psycopg2.connect(dbname=DBNAME)
-c = db.cursor()
 
-c.execute(
-    "CREATE INDEX idx_slug_path_comp ON log ((substr(path, length('/article/') + 1)));")
-
-
-def top_three_articles():
-    c.execute("SELECT title, COUNT(title) AS views FROM articles AS a RIGHT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) GROUP BY title ORDER BY views DESC LIMIT 3;")
-    top_three = c.fetchall()
-    x = 1
-    for article in top_three:
-        print(str(x) + ") " + str(article))
-        x += 1
-    print("\n")
-    c.close()
+#c.execute("SELECT name, COUNT(title) AS views FROM articles AS a LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) LEFT JOIN authors AS c ON a.author = c.id GROUP BY name ORDER BY views DESC;")
+#top_auth = c.fetchall()
+#x = 1
+#for auth in top_auth:
+#    print(str(x) + ") " + str(auth))
+#    x += 1
+#print("\n")
 
 
-top_three_articles()
+
+#c.execute("SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err FROM log GROUP BY day) as sq WHERE ROUND((100 * sq.daily_err / sq.total), 2) > 1;")
+#hi_error_days = c.fetchall()
+#x = 1
+#for day in hi_error_days:
+#    print("The following days had errors on more than 1% of requests:")
+#    print(str(x) + ") " + str(day[0]) + ": " + str(day[1]) + "%")
+#    x += 1
+#print("\n")
+#c.close()
+
+def conduct_analysis(queries):
+    """
+    Attempt to connect to 'news' database, create a results list, and iterate over queries printing the results.
+
+    If unable to connect to the database, print the error and abort.
+    """
+    try:
+        db = psycopg2.connect(database=DBNAME)
+        c = db.cursor()
+        results = []
+
+        for i in queries:
+            c.execute(i)
+            results.append(c.fetchall())
+        db.close()
+
+        return results
+    except psycopg2.Error as error:
+        print(error)
+        sys.exit(1)
 
 
-def top_authors():
-    c = db.cursor()
-    c.execute("SELECT name, count(title) AS views FROM articles AS a LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) LEFT JOIN authors AS c ON a.author = c.id GROUP BY name ORDER BY views DESC;")
-    top_auth = c.fetchall()
-    x = 1
-    for auth in top_auth:
-        print(str(x) + ") " + str(auth))
-        x += 1
-    print("\n")
-    c.close()
-
-
-top_authors()
-
-
-def req_err_days():
-    c = db.cursor()
-
-    c.execute(
-        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(id) FROM log WHERE status LIKE '4%' GROUP BY date_trunc('day', time);")
-    daily_errors = c.fetchall()
-
-    c.execute(
-        "SELECT to_char(date_trunc('day', time), 'Month dd, YYYY'), COUNT(id) FROM log GROUP BY date_trunc('day', time);")
-    daily_requests = c.fetchall()
-
-    # Returns an iterator of tuples where each first/second/third... item is paired together
-    errors_n_requests = zip(daily_errors, daily_requests)
+def answers(results):
+    """
+    """
+    results = ''
     x = 0
-    for err, req in errors_n_requests:
-        perc_daily_error = ((err[1] / req[1]) * 100)
-        date = err[0]
-        if perc_daily_error > 1.0:
-            if x == 0:
-                print("The following dates had error rates over 1%:")
-            print(str(date) + "  %Error:  " +
-                  str("{: 0.2f}".format(perc_daily_error)))
+    for i in results:
+        if i[2]:
+            results += ("x + ') '{res[0]}: {res[1]}%")
             x += 1
-    c.close()
+        else:
+            for res in results:
+                results += ("x + ') '{res[0]}: {res[1]}")
+                x += 1
 
 
-req_err_days()
+def output_to_file(analysis):
+    """
+    """
+    f = open('./' + FILENAME, 'w')
+    f.write(analysis)
+    f.close()
+
+
+if __name__ == "__main__":
+    results = conduct_analysis(queries)
+    analysis = answers(results)
+    output_to_file(analysis)
+    print('{} Successful'.format(FILENAME))
