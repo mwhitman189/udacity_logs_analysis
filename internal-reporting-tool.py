@@ -33,7 +33,8 @@ QUERIES = [
     GROUP BY title
     ORDER BY views DESC LIMIT 3;
     """),
-    # Select the authors of the top three articles based on the number of views (question 2).
+    # Select the authors of the top three articles based on the number of views
+    #    (question 2).
     ("""
     SELECT name, COUNT(title) AS views
     FROM articles AS a
@@ -45,7 +46,8 @@ QUERIES = [
     # Select the days where the error percentage exceeded 1%.
     ("""
     SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc
-    FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err
+    FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as
+        total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err
     FROM log
     GROUP BY day) as sq
     WHERE ROUND((100 * sq.daily_err / sq.total), 2) > 1;
@@ -54,7 +56,8 @@ QUERIES = [
 
 def conduct_analysis(queries):
     """
-    Attempt to connect to the 'news' database, create a results list, and iterate over the queries, printing the results.
+    Attempt to connect to the 'news' database, create a results list, and
+        iterate over the queries, printing the results.
 
     If unable to connect to the database, print the error and abort.
     """
@@ -88,7 +91,8 @@ def format_results_1(q_results):
     """
     Format the text of the results to be printed.
     Create an empty string, 'results'.
-    Iterate through the results, adding 1 to variable 'x' to add rank numbers to results.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers
+        to results.
     """
     results = ''
     x = 1
@@ -104,7 +108,8 @@ def format_results_2(q_results):
     """
     Format the text of the results to be printed.
     Create an empty string, 'results'.
-    Iterate through the results, adding 1 to variable 'x' to add rank numbers to results.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers
+        to results.
     """
     results = ''
     x = 1
@@ -120,7 +125,8 @@ def format_results_3(q_results):
     """
     Format the text of the results to be printed.
     Create an empty string, 'results'.
-    Iterate through the results, adding 1 to variable 'x' to add rank numbers to 'results'.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers
+        to 'results'.
     """
     results = ''
     x = 1
@@ -137,7 +143,8 @@ def answers(ANSWER_TEXT):
 
     Iterate through list of answers, printing formatted text for the results.
 
-        If on the top 3 articles, print the answer with double quotation marks around the article names.
+        If on the top 3 articles, print the answer with double quotation marks
+            around the article names.
 
         If on the daily error percentage, print the answer with a '%'.
     """
