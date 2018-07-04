@@ -5,6 +5,7 @@
 #    1) The 3 most popular articles of all time
 #    2) Who the most popular article authors are
 #    3) On which days more than 1% of requests led to errors.
+# and outputs it in a txt file, 'internal-log-report.txt'.
 
 
 import os
@@ -13,16 +14,17 @@ import psycopg2
 
 DBNAME = "news"
 
-# Specify name given to report text file
+# Specify name given to the report text file.
 FILENAME = "internal-log-report.txt"
 
-# Create array of explanatory text for each query
+# Create an array of explanatory text for each query.
 ANSWER_TEXT = [
     'The three most popular articles of all time are:',
     'The most popular article authors are:',
     'The following days had request errors rates over 1%:']
 
 QUERIES = [
+    # Select top the three articles based on the number of views (question 1).
     ("""
     SELECT title, COUNT(title) AS views
     FROM log AS b
@@ -31,6 +33,7 @@ QUERIES = [
     GROUP BY title
     ORDER BY views DESC LIMIT 3;
     """),
+    # Select the authors of the top three articles based on the number of views (question 2).
     ("""
     SELECT name, COUNT(title) AS views
     FROM articles AS a
@@ -39,6 +42,7 @@ QUERIES = [
     GROUP BY name
     ORDER BY views DESC LIMIT 3;
     """),
+    # Select the days where the error percentage exceeded 1%.
     ("""
     SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc
     FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err
@@ -50,7 +54,7 @@ QUERIES = [
 
 def conduct_analysis(queries):
     """
-    Attempt to connect to 'news' database, create a results list, and iterate over queries printing the results.
+    Attempt to connect to the 'news' database, create a results list, and iterate over the queries, printing the results.
 
     If unable to connect to the database, print the error and abort.
     """
@@ -72,6 +76,8 @@ def conduct_analysis(queries):
 
 def output_to_file(analysis):
     """
+    Open a text file.
+    Write the output of 'conduct_analysis()' to the file.
     """
     f = open('./' + FILENAME, 'w')
     f.write(analysis)
@@ -79,6 +85,11 @@ def output_to_file(analysis):
 
 
 def format_results_1(q_results):
+    """
+    Format the text of the results to be printed.
+    Create an empty string, 'results'.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers to results.
+    """
     results = ''
     x = 1
     for res in q_results:
@@ -90,6 +101,11 @@ def format_results_1(q_results):
 
 
 def format_results_2(q_results):
+    """
+    Format the text of the results to be printed.
+    Create an empty string, 'results'.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers to results.
+    """
     results = ''
     x = 1
     for res in q_results:
@@ -101,6 +117,11 @@ def format_results_2(q_results):
 
 
 def format_results_3(q_results):
+    """
+    Format the text of the results to be printed.
+    Create an empty string, 'results'.
+    Iterate through the results, adding 1 to variable 'x' to add rank numbers to 'results'.
+    """
     results = ''
     x = 1
     for res in q_results:
@@ -112,6 +133,13 @@ def format_results_3(q_results):
 
 def answers(ANSWER_TEXT):
     """
+    Create an empty string, 'coll_results'.
+
+    Iterate through list of answers, printing formatted text for the results.
+
+        If on the top 3 articles, print the answer with double quotation marks around the article names.
+
+        If on the daily error percentage, print the answer with a '%'.
     """
     coll_results = ''
 
@@ -129,6 +157,12 @@ def answers(ANSWER_TEXT):
 
 
 if __name__ == "__main__":
+    """
+    Assign the query function to 'q_results'.
+    Assign the analysis function to 'analysis'.
+    Call the output function.
+    Print '<FILENAME> Successful'.
+    """
     q_results = conduct_analysis(QUERIES)
     analysis = answers(ANSWER_TEXT)
     output_to_file(analysis)
