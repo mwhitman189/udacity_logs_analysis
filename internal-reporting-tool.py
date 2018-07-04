@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Internal reporting tool for use with news website PostgeSQL databaseself. #This programs provides data on:
 #    1) The 3 most popular articles of all time
 #    2) Who the most popular article authors are
@@ -15,9 +17,9 @@ FILENAME = "internal-log-report.txt"
 
 # Create array of explanatory text for each query
 ANSWER_TEXT = [
-    '1. The three most popular articles of all time are:',
-    '2. The most popular article authors are: ',
-    '3. The following days had request errors rates over 1%:']
+    'The three most popular articles of all time are:',
+    'The most popular article authors are: ',
+    'The following days had request errors rates over 1%:']
 
 QUERIES = [
     ("""
@@ -34,7 +36,7 @@ QUERIES = [
     LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1)
     LEFT JOIN authors AS c ON a.author = c.id
     GROUP BY name
-    ORDER BY views DESC;
+    ORDER BY views DESC LIMIT 3;
     """),
     ("""
     SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc
@@ -44,38 +46,6 @@ QUERIES = [
     WHERE ROUND((100 * sq.daily_err / sq.total), 2) > 1;
     """)]
 
-
-
-# Searches the database for the three most accessed articles
-#c.execute("SELECT title, COUNT(title) AS views FROM articles AS a RIGHT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) GROUP BY title ORDER BY views DESC LIMIT 3;")
-#top_three = c.fetchall()
-#x = 1
-#for art in top_three:
-#    print(str(x) + ") " + str(art))
-#    x += 1
-#print("\n")
-
-
-
-#c.execute("SELECT name, COUNT(title) AS views FROM articles AS a LEFT JOIN log AS b ON a.slug = substr(b.path, length('/article/') + 1) LEFT JOIN authors AS c ON a.author = c.id GROUP BY name ORDER BY views DESC;")
-#top_auth = c.fetchall()
-#x = 1
-#for auth in top_auth:
-#    print(str(x) + ") " + str(auth))
-#    x += 1
-#print("\n")
-
-
-
-#c.execute("SELECT sq.day, ROUND((100.0 * sq.daily_err / sq.total), 2) as error_perc FROM (SELECT to_char(date(log.time), 'Mon dd, yyyy') as day, count(id) as total, sum(case WHEN status !='200 OK' then 1 else 0 end) as daily_err FROM log GROUP BY day) as sq WHERE ROUND((100 * sq.daily_err / sq.total), 2) > 1;")
-#hi_error_days = c.fetchall()
-#x = 1
-#for day in hi_error_days:
-#    print("The following days had errors on more than 1% of requests:")
-#    print(str(x) + ") " + str(day[0]) + ": " + str(day[1]) + "%")
-#    x += 1
-#print("\n")
-#c.close()
 
 def conduct_analysis(queries):
     """
@@ -92,26 +62,11 @@ def conduct_analysis(queries):
             c.execute(i)
             results.append(c.fetchall())
         db.close()
-
         return results
+
     except psycopg2.Error as error:
         print(error)
         sys.exit(1)
-
-
-def answers(results):
-    """
-    """
-    results = ''
-    x = 0
-    for i in results:
-        if i[2]:
-            results += ("x + ') '{res[0]}: {res[1]}%")
-            x += 1
-        else:
-            for res in results:
-                results += ("x + ') '{res[0]}: {res[1]}")
-                x += 1
 
 
 def output_to_file(analysis):
@@ -122,8 +77,44 @@ def output_to_file(analysis):
     f.close()
 
 
+def format_results_1(q_results):
+    results = ''
+    x = 1
+    for res in q_results:
+        results += ("   " + str(x) + ") {}: {}%\n").format(res[0], res[1])
+        x += 1
+
+    return results
+
+
+def format_results_2(q_results):
+    results = ''
+    x = 1
+    for res in q_results:
+        results += ("   " + str(x) + ") {}: {} views\n").format(res[0], res[1])
+        x += 1
+
+    return results
+
+
+def answers(ANSWER_TEXT):
+    """
+    """
+    coll_results = ''
+
+    for i in range(len(ANSWER_TEXT)):
+        coll_results += ANSWER_TEXT[i] + '\n'
+
+        if i == 2:
+            coll_results += format_results_1(q_results[i]) + '\n\n'
+        else:
+            coll_results += format_results_2(q_results[i]) + '\n\n'
+
+    return coll_results
+
+
 if __name__ == "__main__":
-    results = conduct_analysis(queries)
-    analysis = answers(results)
+    q_results = conduct_analysis(QUERIES)
+    analysis = answers(ANSWER_TEXT)
     output_to_file(analysis)
     print('{} Successful'.format(FILENAME))
