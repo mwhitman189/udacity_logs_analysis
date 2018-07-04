@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# Internal reporting tool for use with news website PostgeSQL databaseself. #This programs provides data on:
+# Internal reporting tool for use with news website PostgreSQL database.
+# This programs provides data on:
 #    1) The 3 most popular articles of all time
 #    2) Who the most popular article authors are
 #    3) On which days more than 1% of requests led to errors.
@@ -18,14 +19,14 @@ FILENAME = "internal-log-report.txt"
 # Create array of explanatory text for each query
 ANSWER_TEXT = [
     'The three most popular articles of all time are:',
-    'The most popular article authors are: ',
+    'The most popular article authors are:',
     'The following days had request errors rates over 1%:']
 
 QUERIES = [
     ("""
     SELECT title, COUNT(title) AS views
-    FROM articles AS a
-    RIGHT JOIN log AS b
+    FROM log AS b
+    LEFT JOIN articles AS a
     ON a.slug = substr(b.path, length('/article/') + 1)
     GROUP BY title
     ORDER BY views DESC LIMIT 3;
@@ -81,7 +82,8 @@ def format_results_1(q_results):
     results = ''
     x = 1
     for res in q_results:
-        results += ("   " + str(x) + ") {}: {}%\n").format(res[0], res[1])
+        results += ('   ' + str(x) +
+                    ') "{}" — {} views\n').format(res[0], res[1])
         x += 1
 
     return results
@@ -91,7 +93,18 @@ def format_results_2(q_results):
     results = ''
     x = 1
     for res in q_results:
-        results += ("   " + str(x) + ") {}: {} views\n").format(res[0], res[1])
+        results += ('   ' + str(x) +
+                    ') {} — {} views\n').format(res[0], res[1])
+        x += 1
+
+    return results
+
+
+def format_results_3(q_results):
+    results = ''
+    x = 1
+    for res in q_results:
+        results += ('   ' + str(x) + ') {} — {}%\n').format(res[0], res[1])
         x += 1
 
     return results
@@ -105,10 +118,12 @@ def answers(ANSWER_TEXT):
     for i in range(len(ANSWER_TEXT)):
         coll_results += ANSWER_TEXT[i] + '\n'
 
-        if i == 2:
-            coll_results += format_results_1(q_results[i]) + '\n\n'
-        else:
+        if i == 1:
             coll_results += format_results_2(q_results[i]) + '\n\n'
+        elif i == 2:
+            coll_results += format_results_3(q_results[i]) + '\n\n'
+        else:
+            coll_results += format_results_1(q_results[i]) + '\n\n'
 
     return coll_results
 
