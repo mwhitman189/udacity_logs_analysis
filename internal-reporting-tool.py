@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Thanks to https://github.com/lauwrentius/Logs-Analysis for a reference on
+#    formatting output
+
 # Internal reporting tool for use with news website PostgreSQL database.
 # This programs provides data on:
 #    1) The 3 most popular articles of all time
