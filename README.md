@@ -27,7 +27,8 @@ vagrant up
 ```
 to configure the VM. After it is finished, type:
 ```
-vagrant ssh```
+vagrant ssh
+```
 to log in to the VM.
 After that, download the [news database](https://d17h27t6h515a5.cloudfront.net/topher/2016/August/57b5f748_newsdata/newsdata.zip) and type:
 ```python
